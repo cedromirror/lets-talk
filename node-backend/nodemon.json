@@ -1,0 +1,38 @@
+{
+  "verbose": true,
+  "ignore": [
+    ".git",
+    "node_modules",
+    "uploads/*",
+    "*.log",
+    "logs/*",
+    "temp/*",
+    "public/*"
+  ],
+  "watch": [
+    "*.js",
+    "routes/**/*.js",
+    "controllers/**/*.js",
+    "models/**/*.js",
+    "middleware/**/*.js",
+    "config/**/*.js",
+    "utils/**/*.js",
+    "socket/**/*.js"
+  ],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ext": "js,json",
+  "delay": "500",
+  "restartable": "rs",
+  "events": {
+    "restart": "echo \"App restarted due to changes\""
+  },
+  "signal": "SIGTERM",
+  "legacyWatch": true,
+  "pollingInterval": 1000,
+  "execMap": {
+    "js": "node --max-old-space-size=512"
+  },
+  "restartable": "rs"
+}
