@@ -160,6 +160,13 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
+        // Check if currentUser exists and has an _id
+        if (!currentUser || !currentUser._id) {
+          setError('User information not available. Please try again later.');
+          setLoading(false);
+          return;
+        }
+
         // Fetch analytics data from the dashboard endpoint
         const dashboardResponse = await analyticsService.getDashboardAnalytics();
         console.log('Dashboard analytics response:', dashboardResponse);
@@ -253,7 +260,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [currentUser._id]);
+  }, [currentUser]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);

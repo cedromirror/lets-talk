@@ -223,9 +223,10 @@ const ReelCard = ({
             onError={(e) => {
               console.error('Video error for reel', reel._id, ':', e);
               setVideoError(true);
+
               // If there's a thumbnail, we can at least show that
               if (e.target) {
-                e.target.poster = reel.thumbnail || '';
+                e.target.poster = reel.thumbnail || '/assets/default-image.svg';
               }
 
               // Try to load an alternative source if available
@@ -237,6 +238,27 @@ const ReelCard = ({
                 console.log('Trying low quality video source instead');
                 e.target.src = reel.lowQualityVideo;
                 e.target.load();
+              } else {
+                // Try with a direct Cloudinary URL as a last resort
+                try {
+                  const { getDirectCloudinaryUrl, extractCloudinaryId } = require('../../utils/cloudinaryVideoHelper');
+                  const videoId = reel.video ? extractCloudinaryId(reel.video) : null;
+
+                  if (videoId) {
+                    console.log('Trying direct Cloudinary URL with ID:', videoId);
+                    const directUrl = getDirectCloudinaryUrl(videoId, 'video');
+                    e.target.src = directUrl;
+                    e.target.load();
+                  } else {
+                    console.log('No valid video ID found, using fallback');
+                    e.target.src = '/assets/default-video.mp4';
+                    e.target.load();
+                  }
+                } catch (fallbackError) {
+                  console.error('Error using fallback:', fallbackError);
+                  e.target.src = '/assets/default-video.mp4';
+                  e.target.load();
+                }
               }
             }}
             style={{
@@ -246,7 +268,7 @@ const ReelCard = ({
               backgroundColor: 'black',
               ...getFilterStyle(selectedFilter)
             }}
-            poster={reel.thumbnail || ''}
+            poster={reel.thumbnail || '/assets/default-image.svg'}
             preload={isActive ? 'auto' : 'metadata'}
             controlsList="nodownload"
           >

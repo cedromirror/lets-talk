@@ -11,7 +11,8 @@ import {
   HighQuality as HighQualityIcon,
   TuneRounded as LowQualityIcon
 } from '@mui/icons-material';
-import { formatCloudinaryUrl, getResponsiveVideoUrl } from '../../utils/cloudinaryHelper';
+import { formatCloudinaryUrl } from '../../utils/cloudinaryHelper';
+import { getCloudinaryVideoUrl, getAdaptiveVideoUrls, checkVideoUrl } from '../../utils/cloudinaryVideoHelper';
 import { handleVideoError } from '../../utils/imageErrorHandler';
 import { getProperFileUrl, getMimeType, isVideoFile, getFileExtension } from '../../utils/fileUtils';
 
@@ -129,25 +130,16 @@ const EnhancedVideo = ({
       const initialQuality = adaptiveQuality ? detectOptimalQuality() : true;
       setIsHighQuality(initialQuality);
 
-      // Handle different URL types
-      if (properSrc.includes('cloudinary.com')) {
-        // For Cloudinary URLs, use the formatCloudinaryUrl helper
-        const qualityWidth = initialQuality ? highQualityWidth : lowQualityWidth;
-        const optimized = formatCloudinaryUrl(properSrc, 'video', {
-          width: qualityWidth,
-          quality: initialQuality ? 90 : 70
-        });
-        setOptimizedSrc(optimized);
-      } else if (properSrc.startsWith('http') || properSrc.startsWith('/')) {
-        // For non-Cloudinary URLs, use as is
-        setOptimizedSrc(properSrc);
-      } else {
-        // For what might be just a public ID, try to construct a Cloudinary URL
-        const cloudName = 'droja6ntk';
-        const qualityWidth = initialQuality ? highQualityWidth : lowQualityWidth;
-        const optimized = `https://res.cloudinary.com/${cloudName}/video/upload/f_auto,q_${initialQuality ? 90 : 70},w_${qualityWidth}/${properSrc}`;
-        setOptimizedSrc(optimized);
-      }
+      // Use our improved Cloudinary video helper for all video types
+      const qualityWidth = initialQuality ? highQualityWidth : lowQualityWidth;
+      const optimized = getCloudinaryVideoUrl(properSrc, {
+        width: qualityWidth,
+        quality: initialQuality ? 90 : 70,
+        format: 'mp4' // Ensure consistent format
+      });
+
+      console.log('Optimized video source:', optimized);
+      setOptimizedSrc(optimized);
 
       // Optimize thumbnail if available
       if (properThumbnail) {
@@ -243,23 +235,18 @@ const EnhancedVideo = ({
 
       let optimized;
 
-      // Handle different URL types
-      if (properSrc.includes('cloudinary.com')) {
-        // For Cloudinary URLs, use the formatCloudinaryUrl helper
-        const qualityWidth = newQuality ? highQualityWidth : lowQualityWidth;
-        optimized = formatCloudinaryUrl(properSrc, 'video', {
-          width: qualityWidth,
-          quality: newQuality ? 90 : 70
-        });
-      } else if (properSrc.startsWith('http') || properSrc.startsWith('/')) {
-        // For non-Cloudinary URLs, we can't change quality, so just return
-        console.log('Cannot change quality for non-Cloudinary URLs');
+      // Use our improved Cloudinary video helper for all video types
+      const qualityWidth = newQuality ? highQualityWidth : lowQualityWidth;
+      optimized = getCloudinaryVideoUrl(properSrc, {
+        width: qualityWidth,
+        quality: newQuality ? 90 : 70,
+        format: 'mp4' // Ensure consistent format
+      });
+
+      // If it's not a Cloudinary URL and we couldn't process it, log and return
+      if (!optimized || optimized === '/assets/default-video.svg') {
+        console.log('Cannot change quality for this video URL');
         return;
-      } else {
-        // For what might be just a public ID, try to construct a Cloudinary URL
-        const cloudName = 'droja6ntk';
-        const qualityWidth = newQuality ? highQualityWidth : lowQualityWidth;
-        optimized = `https://res.cloudinary.com/${cloudName}/video/upload/f_auto,q_${newQuality ? 90 : 70},w_${qualityWidth}/${properSrc}`;
       }
 
       setOptimizedSrc(optimized);
@@ -406,11 +393,14 @@ const EnhancedVideo = ({
               console.error('Error with Cloudinary recovery:', cloudinaryError);
             }
           } else if (!properSrc.startsWith('http') && !properSrc.startsWith('/')) {
-            // 3. If it might be just a public ID, try direct Cloudinary URL
+            // 3. If it might be just a public ID, try direct Cloudinary URL with our helper
             try {
-              const cloudName = 'droja6ntk';
-              const directUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${properSrc}`;
-              console.log('Trying direct Cloudinary URL:', directUrl);
+              // Try with basic settings and cache busting
+              const directUrl = getCloudinaryVideoUrl(properSrc, {
+                format: 'mp4',
+                quality: 'auto'
+              });
+              console.log('Trying direct Cloudinary URL with helper:', directUrl);
               sourceElement.src = directUrl;
               videoRef.current.load();
 
@@ -771,11 +761,16 @@ const EnhancedVideo = ({
       >
         {/* Support multiple video formats with correct MIME types */}
         <source
-          src={optimizedSrc || getProperFileUrl(src) || '/assets/default-video.svg'}
+          src={optimizedSrc || getCloudinaryVideoUrl(src) || getProperFileUrl(src) || '/assets/default-video.svg'}
           type={getMimeType(src) || 'video/mp4'}
           onError={(e) => {
             console.error('Source error:', e);
-            e.target.src = '/assets/default-video.svg';
+            // Try one more time with our helper before falling back
+            try {
+              e.target.src = getCloudinaryVideoUrl(src, { format: 'mp4', quality: 'auto' });
+            } catch (err) {
+              e.target.src = '/assets/default-video.svg';
+            }
           }}
         />
 

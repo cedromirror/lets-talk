@@ -27,17 +27,20 @@ import Button from '@mui/material/Button';
 import { useTheme, alpha } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
-  Search as SearchIcon,
-  Notifications as NotificationsIcon,
-  Mail as MailIcon,
-  AccountCircle,
-  MoreVert as MoreIcon,
-  Close as CloseIcon,
-  Person as PersonIcon,
-  Photo as PhotoIcon,
-  Tag as TagIcon,
-  ArrowBack as ArrowBackIcon,
-  VerifiedUser as VerifiedIcon
+  SearchRounded as SearchIcon,
+  NotificationsRounded as NotificationsIcon,
+  EmailRounded as MailIcon,
+  AccountCircleRounded as AccountCircle,
+  MoreVertRounded as MoreIcon,
+  CloseRounded as CloseIcon,
+  PersonRounded as PersonIcon,
+  PhotoRounded as PhotoIcon,
+  TagRounded as TagIcon,
+  ArrowBackRounded as ArrowBackIcon,
+  VerifiedRounded as VerifiedIcon,
+  LogoutRounded as LogoutIcon,
+  SettingsRounded as SettingsIcon,
+  DashboardRounded as DashboardIcon
 } from '@mui/icons-material';
 
 // Simple profile picture component to avoid circular dependencies
@@ -135,8 +138,20 @@ const NavProfilePicture = ({ user, size = 'small', linkToProfile = false }) => {
         onError={handleError}
         sx={{
           ...avatarSize,
-          border: '1px solid',
-          borderColor: 'divider'
+          border: '2px solid',
+          borderColor: theme => theme.palette.mode === 'dark'
+            ? alpha(theme.palette.primary.main, 0.3)
+            : alpha(theme.palette.primary.main, 0.2),
+          boxShadow: theme => theme.palette.mode === 'dark'
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+            : '0 4px 12px rgba(99, 102, 241, 0.2)',
+          transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          '&:hover': {
+            transform: 'scale(1.05)',
+            boxShadow: theme => theme.palette.mode === 'dark'
+              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
+              : '0 6px 16px rgba(99, 102, 241, 0.3)',
+          }
         }}
       />
 
@@ -147,14 +162,21 @@ const NavProfilePicture = ({ user, size = 'small', linkToProfile = false }) => {
           badgeContent={
             <Box
               sx={{
-                bgcolor: 'primary.main',
+                background: theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                 borderRadius: '50%',
-                width: avatarSize.width > 40 ? 16 : 14,
-                height: avatarSize.width > 40 ? 16 : 14,
+                width: avatarSize.width > 40 ? 18 : 16,
+                height: avatarSize.width > 40 ? 18 : 16,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid white'
+                border: '2px solid white',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                animation: 'pulse 2s infinite',
+                '@keyframes pulse': {
+                  '0%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0.4)' },
+                  '70%': { boxShadow: '0 0 0 6px rgba(99, 102, 241, 0)' },
+                  '100%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0)' }
+                }
               }}
             >
               <VerifiedIcon sx={{ fontSize: avatarSize.width > 40 ? 12 : 10, color: 'white' }} />
@@ -383,40 +405,132 @@ const Navbar = () => {
       open={isMenuOpen}
       onClose={handleMenuClose}
       PaperProps={{
-        elevation: 3,
-        sx: { mt: 1, borderRadius: 2, minWidth: 180 }
+        elevation: 8,
+        sx: {
+          mt: 1.5,
+          borderRadius: 3,
+          minWidth: 220,
+          overflow: 'visible',
+          '&:before': {
+            content: '""',
+            display: 'block',
+            position: 'absolute',
+            top: -10,
+            right: 14,
+            width: 20,
+            height: 20,
+            bgcolor: 'background.paper',
+            transform: 'rotate(45deg)',
+            zIndex: 0,
+            boxShadow: '-3px -3px 5px rgba(0, 0, 0, 0.04)'
+          },
+        }
       }}
     >
+      <Box sx={{
+        px: 2,
+        pt: 2,
+        pb: 1.5,
+        display: 'flex',
+        alignItems: 'center',
+        borderBottom: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <NavProfilePicture
+          user={currentUser}
+          size="medium"
+          linkToProfile={false}
+        />
+        <Box sx={{ ml: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight="bold">
+            {currentUser?.username || 'User'}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            {currentUser?.email || 'user@example.com'}
+          </Typography>
+        </Box>
+      </Box>
+
       <MenuItem
         component={Link}
         to={`/profile/${currentUser?.username}`}
         onClick={handleMenuClose}
-        sx={{ py: 1.5 }}
+        sx={{
+          py: 1.5,
+          px: 2,
+          borderRadius: 2,
+          mx: 1,
+          mt: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: theme => alpha(theme.palette.primary.main, 0.08),
+            transform: 'translateX(4px)'
+          }
+        }}
       >
-        <PersonIcon sx={{ mr: 2 }} />
-        Profile
+        <PersonIcon sx={{ mr: 2, color: 'primary.main' }} />
+        <Typography variant="body2">Profile</Typography>
       </MenuItem>
+
       <MenuItem
         component={Link}
         to="/dashboard"
         onClick={handleMenuClose}
-        sx={{ py: 1.5 }}
+        sx={{
+          py: 1.5,
+          px: 2,
+          borderRadius: 2,
+          mx: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: theme => alpha(theme.palette.tertiary.main, 0.08),
+            transform: 'translateX(4px)'
+          }
+        }}
       >
-        <PersonIcon sx={{ mr: 2 }} />
-        Dashboard
+        <DashboardIcon sx={{ mr: 2, color: 'tertiary.main' }} />
+        <Typography variant="body2">Dashboard</Typography>
       </MenuItem>
+
       <MenuItem
         component={Link}
         to="/settings"
         onClick={handleMenuClose}
-        sx={{ py: 1.5 }}
+        sx={{
+          py: 1.5,
+          px: 2,
+          borderRadius: 2,
+          mx: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: theme => alpha(theme.palette.info.main, 0.08),
+            transform: 'translateX(4px)'
+          }
+        }}
       >
-        <PersonIcon sx={{ mr: 2 }} />
-        Settings
+        <SettingsIcon sx={{ mr: 2, color: 'info.main' }} />
+        <Typography variant="body2">Settings</Typography>
       </MenuItem>
-      <Divider />
-      <MenuItem onClick={handleLogout} sx={{ py: 1.5 }}>
-        Logout
+
+      <Divider sx={{ my: 1 }} />
+
+      <MenuItem
+        onClick={handleLogout}
+        sx={{
+          py: 1.5,
+          px: 2,
+          borderRadius: 2,
+          mx: 1,
+          mb: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: theme => alpha(theme.palette.error.main, 0.08),
+            transform: 'translateX(4px)'
+          }
+        }}
+      >
+        <LogoutIcon sx={{ mr: 2, color: 'error.main' }} />
+        <Typography variant="body2" color="error.main">Logout</Typography>
       </MenuItem>
     </Menu>
   );
@@ -436,53 +550,163 @@ const Navbar = () => {
       open={isMobileMenuOpen}
       onClose={handleMobileMenuClose}
       PaperProps={{
-        elevation: 3,
-        sx: { mt: 1, borderRadius: 2, minWidth: 200 }
+        elevation: 8,
+        sx: {
+          mt: 1.5,
+          borderRadius: 3,
+          minWidth: 220,
+          overflow: 'visible',
+          '&:before': {
+            content: '""',
+            display: 'block',
+            position: 'absolute',
+            top: -10,
+            right: 14,
+            width: 20,
+            height: 20,
+            bgcolor: 'background.paper',
+            transform: 'rotate(45deg)',
+            zIndex: 0,
+            boxShadow: '-3px -3px 5px rgba(0, 0, 0, 0.04)'
+          },
+        }
       }}
     >
-      <MenuItem onClick={() => {
-        handleMobileMenuClose();
-        navigate('/notifications');
-      }}>
-        <IconButton
-          size="large"
-          color="inherit"
-        >
-          <Badge badgeContent={unreadCount} color="error">
-            <NotificationsIcon />
+      <MenuItem
+        onClick={() => {
+          handleMobileMenuClose();
+          navigate('/notifications');
+        }}
+        sx={{
+          py: 1.5,
+          px: 2,
+          borderRadius: 2,
+          mx: 1,
+          mt: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: theme => alpha(theme.palette.error.main, 0.08),
+            transform: 'translateX(4px)'
+          }
+        }}
+      >
+        <Box sx={{
+          mr: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          bgcolor: theme => alpha(theme.palette.error.main, 0.1),
+        }}>
+          <Badge
+            badgeContent={unreadCount}
+            color="error"
+            sx={{
+              '& .MuiBadge-badge': {
+                fontSize: '0.7rem',
+                height: 20,
+                minWidth: 20,
+                padding: '0 6px',
+                borderRadius: '10px',
+                fontWeight: 'bold',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                background: theme => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, #F87171 0%, #EF4444 100%)'
+                  : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+              }
+            }}
+          >
+            <NotificationsIcon sx={{ color: 'error.main' }} />
           </Badge>
-        </IconButton>
-        <p>Notifications</p>
+        </Box>
+        <Typography variant="body2">Notifications</Typography>
       </MenuItem>
-      <MenuItem onClick={() => {
-        handleMobileMenuClose();
-        navigate('/messages');
-      }}>
-        <IconButton
-          size="large"
-          color="inherit"
-        >
-          <Badge badgeContent={currentUser?.unreadMessages || 0} color="error">
-            <MailIcon />
+
+      <MenuItem
+        onClick={() => {
+          handleMobileMenuClose();
+          navigate('/messages');
+        }}
+        sx={{
+          py: 1.5,
+          px: 2,
+          borderRadius: 2,
+          mx: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: theme => alpha(theme.palette.primary.main, 0.08),
+            transform: 'translateX(4px)'
+          }
+        }}
+      >
+        <Box sx={{
+          mr: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
+        }}>
+          <Badge
+            badgeContent={currentUser?.unreadMessages || 0}
+            color="primary"
+            sx={{
+              '& .MuiBadge-badge': {
+                fontSize: '0.7rem',
+                height: 20,
+                minWidth: 20,
+                padding: '0 6px',
+                borderRadius: '10px',
+                fontWeight: 'bold',
+                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)',
+                background: theme => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)'
+                  : 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+              }
+            }}
+          >
+            <MailIcon sx={{ color: 'primary.main' }} />
           </Badge>
-        </IconButton>
-        <p>Messages</p>
+        </Box>
+        <Typography variant="body2">Messages</Typography>
       </MenuItem>
-      <MenuItem onClick={handleProfileMenuOpen}>
-        <IconButton
-          size="large"
-          aria-label="account of current user"
-          aria-controls="primary-search-account-menu"
-          aria-haspopup="true"
-          color="inherit"
-        >
+
+      <MenuItem
+        onClick={handleProfileMenuOpen}
+        sx={{
+          py: 1.5,
+          px: 2,
+          borderRadius: 2,
+          mx: 1,
+          mb: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: theme => alpha(theme.palette.secondary.main, 0.08),
+            transform: 'translateX(4px)'
+          }
+        }}
+      >
+        <Box sx={{
+          mr: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          bgcolor: theme => alpha(theme.palette.secondary.main, 0.1),
+        }}>
           <NavProfilePicture
             user={currentUser}
             size={{ width: 32, height: 32 }}
             linkToProfile={false}
           />
-        </IconButton>
-        <p>Profile</p>
+        </Box>
+        <Typography variant="body2">Profile</Typography>
       </MenuItem>
     </Menu>
   );
@@ -521,17 +745,37 @@ const Navbar = () => {
 
     return (
       <Paper
-        elevation={3}
+        elevation={8}
         sx={{
           position: 'absolute',
           top: '100%',
           left: 0,
           right: 0,
-          mt: 1,
-          borderRadius: 2,
+          mt: 1.5,
+          borderRadius: 3,
           maxHeight: '80vh',
           overflow: 'auto',
-          zIndex: 1200
+          zIndex: 1200,
+          boxShadow: theme => theme.palette.mode === 'dark'
+            ? '0 12px 32px rgba(0, 0, 0, 0.4)'
+            : '0 12px 32px rgba(99, 102, 241, 0.2)',
+          backdropFilter: 'blur(8px)',
+          backgroundColor: theme => theme.palette.mode === 'dark'
+            ? alpha(theme.palette.background.paper, 0.9)
+            : alpha(theme.palette.background.paper, 0.95),
+          '&::-webkit-scrollbar': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: theme => alpha(theme.palette.primary.main, 0.2),
+            borderRadius: '10px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: theme => alpha(theme.palette.primary.main, 0.4),
+          },
         }}
       >
         {isSearching ? (
@@ -907,11 +1151,17 @@ const Navbar = () => {
       <AppBar
         position="fixed"
         color="default"
-        elevation={1}
+        elevation={0}
         sx={{
-          bgcolor: 'background.paper',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          zIndex: theme.zIndex.drawer + 1
+          bgcolor: theme => theme.palette.mode === 'dark'
+            ? alpha(theme.palette.background.paper, 0.8)
+            : alpha(theme.palette.background.paper, 0.8),
+          backdropFilter: 'blur(10px)',
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          zIndex: theme.zIndex.drawer + 1,
+          boxShadow: theme => theme.palette.mode === 'dark'
+            ? '0 4px 20px rgba(0, 0, 0, 0.2)'
+            : '0 4px 20px rgba(99, 102, 241, 0.1)',
         }}
       >
         <Toolbar>
@@ -927,8 +1177,17 @@ const Navbar = () => {
                 display: { xs: 'none', sm: 'flex' },
                 fontWeight: 700,
                 letterSpacing: '.2rem',
-                color: 'inherit',
+                background: theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textFillColor: 'transparent',
                 textDecoration: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  letterSpacing: '.22rem',
+                }
               }}
             >
               Let's Talk
@@ -948,8 +1207,17 @@ const Navbar = () => {
                 flexGrow: 1,
                 fontWeight: 700,
                 letterSpacing: '.1rem',
-                color: 'inherit',
+                background: theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textFillColor: 'transparent',
                 textDecoration: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  letterSpacing: '.12rem',
+                }
               }}
             >
               LT
@@ -962,14 +1230,25 @@ const Navbar = () => {
               ref={searchRef}
               sx={{
                 position: 'relative',
-                borderRadius: 2,
-                bgcolor: alpha(theme.palette.common.black, 0.04),
+                borderRadius: 3,
+                bgcolor: theme => theme.palette.mode === 'dark'
+                  ? alpha(theme.palette.common.white, 0.06)
+                  : alpha(theme.palette.common.black, 0.04),
                 '&:hover': {
-                  bgcolor: alpha(theme.palette.common.black, 0.08),
+                  bgcolor: theme => theme.palette.mode === 'dark'
+                    ? alpha(theme.palette.common.white, 0.1)
+                    : alpha(theme.palette.common.black, 0.06),
+                  boxShadow: theme => theme.palette.mode === 'dark'
+                    ? '0 4px 12px rgba(0, 0, 0, 0.2)'
+                    : '0 4px 12px rgba(99, 102, 241, 0.1)',
                 },
                 mr: 2,
                 ml: expandedSearch && isSmall ? 0 : 'auto',
                 width: expandedSearch && isSmall ? '100%' : 'auto',
+                transition: 'all 0.3s ease',
+                boxShadow: theme => theme.palette.mode === 'dark'
+                  ? '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  : '0 2px 8px rgba(99, 102, 241, 0.08)',
               }}
             >
               <Box sx={{
@@ -980,6 +1259,9 @@ const Navbar = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                color: theme => theme.palette.mode === 'dark'
+                  ? alpha(theme.palette.common.white, 0.7)
+                  : alpha(theme.palette.common.black, 0.5),
               }}>
                 {expandedSearch && isSmall ? (
                   <IconButton
@@ -1003,12 +1285,23 @@ const Navbar = () => {
                   onKeyDown={handleSearchKeyDown}
                   sx={{
                     color: 'inherit',
-                    width: expandedSearch && isSmall ? '100%' : '30ch',
+                    width: expandedSearch && isSmall ? '100%' : '35ch',
                     '& .MuiInputBase-input': {
-                      padding: theme.spacing(1, 1, 1, 0),
+                      padding: theme.spacing(1.2, 1, 1.2, 0),
                       paddingLeft: `calc(1em + ${theme.spacing(4)})`,
                       transition: theme.transitions.create('width'),
                       width: '100%',
+                      fontSize: '0.95rem',
+                      '&::placeholder': {
+                        opacity: 0.7,
+                        fontStyle: 'italic',
+                        fontSize: '0.9rem',
+                      },
+                      '&:focus': {
+                        '&::placeholder': {
+                          opacity: 0.5,
+                        },
+                      },
                     },
                   }}
                 />
@@ -1027,6 +1320,20 @@ const Navbar = () => {
                     right: 8,
                     top: '50%',
                     transform: 'translateY(-50%)',
+                    color: theme => theme.palette.mode === 'dark'
+                      ? alpha(theme.palette.common.white, 0.7)
+                      : alpha(theme.palette.common.black, 0.5),
+                    bgcolor: theme => theme.palette.mode === 'dark'
+                      ? alpha(theme.palette.common.white, 0.1)
+                      : alpha(theme.palette.common.black, 0.05),
+                    padding: '4px',
+                    borderRadius: '50%',
+                    '&:hover': {
+                      bgcolor: theme => theme.palette.mode === 'dark'
+                        ? alpha(theme.palette.common.white, 0.15)
+                        : alpha(theme.palette.common.black, 0.1),
+                    },
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   <CloseIcon fontSize="small" />
@@ -1043,7 +1350,19 @@ const Navbar = () => {
               aria-label="search"
               color="inherit"
               onClick={handleToggleSearch}
-              sx={{ ml: 'auto' }}
+              sx={{
+                ml: 'auto',
+                bgcolor: theme => theme.palette.mode === 'dark'
+                  ? alpha(theme.palette.primary.main, 0.1)
+                  : alpha(theme.palette.primary.main, 0.05),
+                '&:hover': {
+                  bgcolor: theme => theme.palette.mode === 'dark'
+                    ? alpha(theme.palette.primary.main, 0.2)
+                    : alpha(theme.palette.primary.main, 0.1),
+                  transform: 'scale(1.05)',
+                },
+                transition: 'all 0.3s ease',
+              }}
             >
               <SearchIcon />
             </IconButton>
@@ -1061,7 +1380,24 @@ const Navbar = () => {
                   component={Link}
                   to="/messages"
                 >
-                  <Badge badgeContent={currentUser?.unreadMessages || 0} color="error">
+                  <Badge
+                    badgeContent={currentUser?.unreadMessages || 0}
+                    color="primary"
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        fontSize: '0.7rem',
+                        height: 20,
+                        minWidth: 20,
+                        padding: '0 6px',
+                        borderRadius: '10px',
+                        fontWeight: 'bold',
+                        boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)',
+                        background: theme => theme.palette.mode === 'dark'
+                          ? 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)'
+                          : 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                      }
+                    }}
+                  >
                     <MailIcon />
                   </Badge>
                 </IconButton>
@@ -1109,7 +1445,19 @@ const Navbar = () => {
                 component={Link}
                 to="/login"
                 variant="outlined"
-                sx={{ borderRadius: 2 }}
+                sx={{
+                  borderRadius: 3,
+                  px: 3,
+                  py: 1,
+                  borderWidth: 2,
+                  fontWeight: 600,
+                  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  '&:hover': {
+                    borderWidth: 2,
+                    transform: 'translateY(-3px)',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)',
+                  }
+                }}
               >
                 Login
               </Button>
@@ -1117,7 +1465,19 @@ const Navbar = () => {
                 component={Link}
                 to="/register"
                 variant="contained"
-                sx={{ borderRadius: 2 }}
+                sx={{
+                  borderRadius: 3,
+                  px: 3,
+                  py: 1,
+                  fontWeight: 600,
+                  background: theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  '&:hover': {
+                    background: theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                    transform: 'translateY(-3px)',
+                    boxShadow: '0 6px 20px rgba(99, 102, 241, 0.3)',
+                  }
+                }}
               >
                 Register
               </Button>

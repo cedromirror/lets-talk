@@ -20,6 +20,7 @@ import {
   Security as SecurityIcon
 } from '@mui/icons-material';
 import { handleApiError } from '../utils/errorUtils';
+import BackendConnectionTest from '../components/BackendConnectionTest';
 // Note: We're importing 'motion' but it's not actually available
 // This is just to show how we would use it if it were installed
 // import { motion } from 'framer-motion';
@@ -315,15 +316,22 @@ const Register = () => {
       // Remove confirmPassword before sending to API
       const { confirmPassword, ...registerData } = formData;
 
+      console.log('Starting registration process...');
+
       // Create form data if there's a profile picture
       if (formData.profilePicture) {
+        console.log('Registration with profile picture');
         const formDataObj = new FormData();
 
         // Add all text fields
         Object.keys(registerData).forEach(key => {
           if (key !== 'profilePicture') {
             // Log each field being added to FormData for debugging
-            console.log(`Adding field to FormData: ${key} = ${registerData[key]}`);
+            if (key === 'password') {
+              console.log(`Adding field to FormData: ${key} = ********`);
+            } else {
+              console.log(`Adding field to FormData: ${key} = ${registerData[key]}`);
+            }
             formDataObj.append(key, registerData[key]);
           }
         });
@@ -339,25 +347,63 @@ const Register = () => {
 
         // Log the FormData contents for debugging
         for (let pair of formDataObj.entries()) {
-          console.log(`FormData contains: ${pair[0]}, ${pair[1]}`);
+          if (pair[0] === 'password') {
+            console.log(`FormData contains: ${pair[0]}, ********`);
+          } else if (pair[0] === 'profilePicture') {
+            console.log(`FormData contains: ${pair[0]}, File (${formData.profilePicture.name}, ${formData.profilePicture.size} bytes)`);
+          } else {
+            console.log(`FormData contains: ${pair[0]}, ${pair[1]}`);
+          }
         }
 
-        await register(formDataObj);
+        try {
+          await register(formDataObj);
+          console.log('Registration with FormData successful');
+        } catch (formDataError) {
+          console.error('FormData registration failed, trying without profile picture:', formDataError.message);
+
+          // If FormData registration fails, try without the profile picture
+          console.log('Falling back to JSON registration without profile picture');
+          delete registerData.profilePicture;
+          await register(registerData);
+        }
       } else {
         // Log the registration data for debugging
-        console.log('Registering with data:', registerData);
+        console.log('Registering with JSON data:', {
+          ...registerData,
+          password: '********'
+        });
         await register(registerData);
       }
+
+      console.log('Registration successful!');
 
       // Show success message
       setShowSuccessMessage(true);
 
-      // Redirect after a short delay
+      // Set the same flags as login to ensure sidebar is visible
+      localStorage.setItem('loginSuccess', 'true');
+      sessionStorage.setItem('freshLogin', 'true');
+
+      // Redirect to home page after a short delay
       setTimeout(() => {
+        console.log('Registration successful, redirecting to home page');
         navigate('/');
       }, 1500);
     } catch (err) {
-      const errorMessage = handleApiError(err, 'Register.handleSubmit');
+      console.error('Registration error details:', err);
+
+      let errorMessage = handleApiError(err, 'Register.handleSubmit');
+
+      // Add more specific error messages based on the error
+      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+        errorMessage = 'Registration failed: The server requires authentication for registration. Please try a different endpoint or contact support.';
+      } else if (err.message?.includes('400') || err.message?.includes('Bad Request')) {
+        errorMessage = 'Registration failed: The server rejected the registration data. Please check your information and try again.';
+      } else if (err.message?.includes('Network Error') || err.message?.includes('Failed to fetch')) {
+        errorMessage = 'Network error: Please check if the backend server is running on port 60000.';
+      }
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -909,6 +955,13 @@ const Register = () => {
             </Typography>
           </Box>
         </Paper>
+
+        {/* Show backend connection test when there's a network error */}
+        {error && (error.includes('Network error') || error.includes('backend server')) && (
+          <Box sx={{ mt: 4, width: '100%' }}>
+            <BackendConnectionTest />
+          </Box>
+        )}
       </Box>
     </Container>
   );

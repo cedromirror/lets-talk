@@ -11,9 +11,21 @@ const getBaseUrl = () => {
   // This should match the port where the backend is running
   const backendPort = 60000;
 
+  // Check if we're in a development environment
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  // Use localhost in development, but try to be smarter about the hostname in production
+  let hostname = 'localhost';
+
+  // In production or if not explicitly in development, try to use the current hostname
+  if (!isDevelopment && typeof window !== 'undefined') {
+    hostname = window.location.hostname;
+  }
+
   // Always use direct connection to backend for sockets
-  console.log(`Using socket URL: http://localhost:${backendPort}`);
-  return `http://localhost:${backendPort}`;
+  const socketUrl = `http://${hostname}:${backendPort}`;
+  console.log(`Using socket URL: ${socketUrl}`);
+  return socketUrl;
 };
 
 let socket = null;
@@ -132,44 +144,63 @@ export const initializeSocket = (token) => {
     // Try without Bearer prefix first as a fallback
     const tokenWithoutBearer = authToken.startsWith('Bearer ') ? authToken.substring(7) : authToken;
 
-    // Try to create a socket connection with multiple configurations
+    // Try to create a socket connection with improved configuration
     try {
+      // Log the connection attempt details
+      console.log(`Attempting socket connection to ${baseUrl} with token: ${tokenWithoutBearer.substring(0, 10)}...`);
+
+      // Create socket with improved configuration
       socket = io(baseUrl, {
-        auth: { token: tokenWithoutBearer }, // Try without Bearer format first
-        query: { token: tokenWithoutBearer }, // Also include token in query without Bearer
-        transports: ['polling', 'websocket'], // Try polling first, then websocket
+        // Authentication - try multiple approaches
+        auth: { token: tokenWithoutBearer },
+        query: { token: tokenWithoutBearer },
+
+        // Transport configuration - try both polling and websocket
+        transports: ['polling', 'websocket'],
+        upgrade: true, // Allow transport upgrade
+        rememberUpgrade: true,
+
+        // Reconnection settings
         reconnection: true,
-        reconnectionAttempts: 2, // Reduced attempts to avoid excessive retries
-        reconnectionDelay: 3000, // Longer delay between attempts
-        reconnectionDelayMax: 15000,
-        timeout: 20000, // Increased timeout for better reliability
+        reconnectionAttempts: 5,
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
+        randomizationFactor: 0.5,
+
+        // Timeout and connection settings
+        timeout: 30000, // Increased timeout for better reliability
         autoConnect: true,
-        forceNew: false, // Don't force a new connection every time
+        forceNew: false,
+        multiplex: true,
+
+        // Path and CORS settings
         path: '/socket.io',
-        withCredentials: false, // Disable CORS credentials to avoid issues
+        withCredentials: false,
+
+        // Extra headers for authentication
         extraHeaders: {
-          'Authorization': tokenWithoutBearer // Try without Bearer format
+          'Authorization': tokenWithoutBearer
         }
       });
-    } catch (socketError) {
-      console.error('Error creating socket with first configuration:', socketError);
 
-      // Try a simpler configuration as fallback
+      console.log('Socket connection initialized with improved configuration');
+    } catch (socketError) {
+      console.error('Error creating socket with primary configuration:', socketError);
+
+      // Try a minimal configuration as fallback
       try {
+        console.log('Attempting fallback socket connection with minimal configuration');
         socket = io(baseUrl, {
           query: { token: tokenWithoutBearer },
           transports: ['polling', 'websocket'],
           reconnection: true,
-          reconnectionAttempts: 1, // Only try once
-          reconnectionDelay: 5000, // Longer delay
           timeout: 20000,
           autoConnect: true
         });
       } catch (fallbackError) {
         console.error('Error creating socket with fallback configuration:', fallbackError);
-
-        // No mock socket - require real backend connection
         console.log('Socket connection failed after multiple attempts');
+        return null;
       }
     }
 
@@ -690,27 +721,47 @@ export const updateSocketUrl = (port) => {
     console.log(`Using direct URL: ${newUrl}`);
   }
 
-  // Create a new socket with the updated URL
+  // Create a new socket with the updated URL using improved configuration
   try {
     // Try without Bearer prefix as a fallback
     const tokenWithoutBearer = authToken.startsWith('Bearer ') ? authToken.substring(7) : authToken;
 
+    console.log(`Updating socket connection to ${newUrl} with token: ${tokenWithoutBearer.substring(0, 10)}...`);
+
     socket = io(newUrl, {
-      auth: { token: tokenWithoutBearer }, // Use token without Bearer format
-      query: { token: tokenWithoutBearer }, // Also include token in query without Bearer
-      transports: ['websocket', 'polling'],
+      // Authentication - try multiple approaches
+      auth: { token: tokenWithoutBearer },
+      query: { token: tokenWithoutBearer },
+
+      // Transport configuration - try both polling and websocket
+      transports: ['polling', 'websocket'],
+      upgrade: true, // Allow transport upgrade
+      rememberUpgrade: true,
+
+      // Reconnection settings
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
+      reconnectionDelayMax: 10000,
+      randomizationFactor: 0.5,
+
+      // Timeout and connection settings
+      timeout: 30000, // Increased timeout for better reliability
       autoConnect: true,
+      forceNew: false,
+      multiplex: true,
+
+      // Path and CORS settings
       path: '/socket.io',
-      withCredentials: false, // Disable CORS credentials to avoid issues
+      withCredentials: true,
+
+      // Extra headers for authentication
       extraHeaders: {
-        'Authorization': tokenWithoutBearer // Use token without Bearer format
+        'Authorization': tokenWithoutBearer
       }
     });
+
+    console.log('Socket connection updated with improved configuration');
 
     console.log('Socket URL updated with Bearer token format');
 

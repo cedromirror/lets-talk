@@ -178,11 +178,13 @@ export const AuthProvider = ({ children }) => {
         if (storedUser && token && validateToken(token)) {
           const user = JSON.parse(storedUser);
 
-          // Use startTransition to avoid suspense errors
+          // Set isAuthenticated first, then currentUser to ensure proper state update
+          setIsAuthenticated(true);
           startTransition(() => {
             setCurrentUser(user);
-            setIsAuthenticated(true);
           });
+
+          console.log('Authentication state initialized from localStorage: isAuthenticated =', true);
 
           // Initialize socket connection with token
           try {
@@ -220,11 +222,13 @@ export const AuthProvider = ({ children }) => {
           if (newToken && storedUser) {
             const user = JSON.parse(storedUser);
 
-            // Use startTransition to avoid suspense errors
+            // Set isAuthenticated first, then currentUser to ensure proper state update
+            setIsAuthenticated(true);
             startTransition(() => {
               setCurrentUser(user);
-              setIsAuthenticated(true);
             });
+
+            console.log('Authentication state initialized after token refresh: isAuthenticated =', true);
 
             // Initialize socket connection with new token
             try {
@@ -352,10 +356,14 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Update state with startTransition to avoid suspense errors
+      // Set isAuthenticated first, then currentUser to ensure proper state update
+      setIsAuthenticated(true);
       startTransition(() => {
         setCurrentUser(user);
-        setIsAuthenticated(true);
       });
+
+      // Log authentication state for debugging
+      console.log('Authentication state updated: isAuthenticated =', true);
 
       // Initialize socket connection with token
       console.log('Initializing socket connection after login');
@@ -446,7 +454,53 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Please enter a valid email address');
       }
 
-      const response = await authService.register(userData);
+      // Create a standardized registration object
+      let registrationData;
+
+      if (isFormData) {
+        // If it's FormData, convert to a plain object for consistent handling
+        registrationData = {
+          username: userData.get('username'),
+          email: userData.get('email'),
+          password: userData.get('password'),
+          fullName: userData.get('fullName'),
+          bio: userData.get('bio') || ''
+        };
+
+        // Handle profile picture separately if it exists
+        const profilePicture = userData.get('profilePicture');
+        if (profilePicture && profilePicture.size > 0) {
+          // Create a new FormData object with just the standardized fields
+          const formDataObj = new FormData();
+          formDataObj.append('username', registrationData.username);
+          formDataObj.append('email', registrationData.email);
+          formDataObj.append('password', registrationData.password);
+          formDataObj.append('fullName', registrationData.fullName);
+          formDataObj.append('bio', registrationData.bio);
+          formDataObj.append('profilePicture', profilePicture);
+
+          console.log('Registering with FormData (contains file)');
+          const response = await authService.register(formDataObj);
+          const { user, token } = response.data;
+          return { user, token };
+        }
+      } else {
+        registrationData = {
+          username: userData.username,
+          email: userData.email,
+          password: userData.password,
+          fullName: userData.fullName,
+          bio: userData.bio || ''
+        };
+      }
+
+      // Log the final registration data (without password)
+      console.log('Registering with data:', {
+        ...registrationData,
+        password: '********'
+      });
+
+      const response = await authService.register(registrationData);
       const { user, token } = response.data;
 
       if (!user || !token) {
@@ -468,10 +522,19 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Update state with startTransition to avoid suspense errors
+      // Set isAuthenticated first, then currentUser to ensure proper state update
+      setIsAuthenticated(true);
       startTransition(() => {
         setCurrentUser(user);
-        setIsAuthenticated(true);
       });
+
+      // Set flags to ensure sidebar is visible after registration
+      localStorage.setItem('loginSuccess', 'true');
+      sessionStorage.setItem('freshLogin', 'true');
+      console.log('AuthContext: Set flags for successful registration and fresh login');
+
+      // Log authentication state for debugging
+      console.log('Authentication state updated after registration: isAuthenticated =', true);
 
       // Initialize socket connection with token
       console.log('Initializing socket connection after registration');

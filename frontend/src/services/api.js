@@ -62,7 +62,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true
+  withCredentials: true,
+  // Ensure proper CORS handling
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN'
 });
 
 // Log the API URL being used
@@ -460,41 +463,187 @@ const services = {
     register: (userData) => {
       console.log('Registering user with data:', userData instanceof FormData ? 'FormData object' : userData);
 
-      // Try multiple endpoints with better error handling
-      return api.post(fixPath('/api/auth/register'), userData)
-        .catch(error => {
-          console.log('Primary register endpoint failed, trying alternative:', error.message);
-          return api.post(fixPath('/auth/register'), userData);
-        })
-        .catch(error => {
-          console.log('Secondary register endpoint failed, trying third endpoint:', error.message);
-          return api.post(fixPath('/api/users/register'), userData);
-        })
-        .catch(error => {
-          console.log('Third register endpoint failed, trying direct fetch:', error.message);
+      // Determine if we're dealing with FormData or JSON
+      const isFormData = userData instanceof FormData;
 
-          // Try a direct fetch as a last resort
-          return fetch(`http://localhost:${backendPort}${fixPath('/api/auth/register')}`, {
+      // Log detailed information about the request
+      if (isFormData) {
+        console.log('Registration data is FormData:');
+        for (let [key, value] of userData.entries()) {
+          if (key === 'password') {
+            console.log(`- ${key}: ********`);
+          } else if (key === 'profilePicture' && value instanceof File) {
+            console.log(`- ${key}: File (${value.name}, ${value.type}, ${value.size} bytes)`);
+          } else {
+            console.log(`- ${key}: ${value}`);
+          }
+        }
+      } else {
+        console.log('Registration data is JSON:', {
+          ...userData,
+          password: userData.password ? '********' : undefined
+        });
+      }
+
+      // Create a function to try registration at a specific endpoint
+      function tryEndpoint(endpoint) {
+        console.log(`Trying registration at endpoint: ${endpoint}`);
+
+        // Create a new axios instance without auth interceptors for registration
+        const publicApi = axios.create({
+          baseURL: `http://localhost:${backendPort}`,
+          timeout: 15000,
+          headers: isFormData ? {} : {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        // Make the request directly without auth headers
+        return publicApi.post(endpoint, userData)
+          .then(response => {
+            console.log(`Registration successful at ${endpoint}:`, response.data);
+            return response;
+          })
+          .catch(error => {
+            console.error(`Registration failed at ${endpoint}:`, error.message);
+            if (error.response) {
+              console.error('Response status:', error.response.status);
+              console.error('Response data:', error.response.data);
+
+              // If it's an auth error, we want to throw a specific error
+              if (error.response.status === 401 || error.response.status === 403) {
+                console.error(`Authentication error at ${endpoint} - endpoint requires authentication`);
+                throw new Error(`Endpoint ${endpoint} requires authentication`);
+              }
+            }
+            throw error;
+          });
+      }
+
+      // Function to try registration with fetch
+      function tryWithFetch() {
+        console.log('Trying registration with direct fetch');
+
+        // Try multiple endpoints with fetch
+        const endpoints = [
+          '/auth/register',           // Try the most direct public endpoint first
+          '/api/auth/register',       // Then try the API auth endpoint
+          '/register',                // Then try a simple /register endpoint
+          '/api/users/register'       // Finally try the users register endpoint
+        ];
+
+        // Try the first endpoint
+        return tryFetchEndpoint(endpoints, 0);
+      }
+
+      // Helper function to try fetch endpoints recursively
+      function tryFetchEndpoint(endpoints, index) {
+        if (index >= endpoints.length) {
+          // We've tried all endpoints
+          console.error('All fetch registration endpoints failed');
+          return Promise.reject(new Error('Registration failed'));
+        }
+
+        const endpoint = endpoints[index];
+        console.log(`Trying fetch registration at endpoint: ${endpoint}`);
+
+        const url = `http://localhost:${backendPort}${endpoint}`;
+        let fetchPromise;
+
+        if (isFormData) {
+          // For FormData, we need to use the FormData object directly
+          fetchPromise = fetch(url, {
+            method: 'POST',
+            body: userData,
+            // Don't include credentials for registration
+          });
+        } else {
+          // For JSON, we need to stringify the data
+          fetchPromise = fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(userData instanceof FormData ?
-              Object.fromEntries(userData.entries()) : userData)
-          })
+            body: JSON.stringify(userData),
+            // Don't include credentials for registration
+          });
+        }
+
+        return fetchPromise
           .then(response => {
             if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
+              // If it's an auth error, try the next endpoint
+              if (response.status === 401 || response.status === 403) {
+                console.log(`Auth error at ${endpoint}, trying next endpoint`);
+                return tryFetchEndpoint(endpoints, index + 1);
+              }
+
+              // For other errors, get the error text and throw
+              return response.text().then(errorText => {
+                console.error(`HTTP error at ${endpoint}! Status: ${response.status}, Body:`, errorText);
+                throw new Error(`HTTP error! Status: ${response.status}`);
+              });
             }
-            return response.json();
+
+            // If we got here, the request was successful
+            return response.json().then(data => {
+              console.log(`Registration successful with fetch at ${endpoint}:`, data);
+              return { data };
+            });
           })
-          .then(data => {
-            return { data };
+          .catch(error => {
+            if (error.message.includes('Auth error')) {
+              // This is our special case for auth errors, try the next endpoint
+              return tryFetchEndpoint(endpoints, index + 1);
+            }
+
+            console.error(`Registration failed with fetch at ${endpoint}:`, error.message);
+            // Try the next endpoint
+            return tryFetchEndpoint(endpoints, index + 1);
           });
+      }
+
+      // Try the public registration endpoint directly first (without auth)
+      console.log('Trying direct public registration endpoint');
+
+      // Create a new axios instance without the auth interceptors
+      const publicApi = axios.create({
+        baseURL: `http://localhost:${backendPort}`,
+        timeout: 15000,
+        headers: {
+          'Content-Type': isFormData ? 'multipart/form-data' : 'application/json',
+        }
+      });
+
+      // Make the request directly to the registration endpoint
+      return publicApi.post('/auth/register', userData)
+        .then(response => {
+          console.log('Registration successful with public endpoint:', response.data);
+          return response;
         })
-        .catch(error => {
-          console.error('All register endpoints failed:', error.message);
-          throw error;
+        .catch(publicError => {
+          console.error('Public registration endpoint failed:', publicError.message);
+          if (publicError.response) {
+            console.error('Response status:', publicError.response.status);
+            console.error('Response data:', publicError.response.data);
+          }
+
+          // Fall back to the regular sequence if the direct approach fails
+          console.log('Falling back to regular registration sequence');
+
+          return tryEndpoint('/api/auth/register')
+            .catch(error => {
+              console.log('Primary register endpoint failed, trying alternative:', error.message);
+              return tryEndpoint('/auth/register');
+            })
+            .catch(error => {
+              console.log('Secondary register endpoint failed, trying third endpoint:', error.message);
+              return tryEndpoint('/api/users/register');
+            })
+            .catch(error => {
+              console.log('All API endpoints failed, trying direct fetch:', error.message);
+              return tryWithFetch();
+            });
         });
     },
     logout: () => {
@@ -1404,7 +1553,9 @@ const services = {
       const config = {
         headers: {
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        // Increase timeout for large video uploads
+        timeout: 120000 // 120 seconds (2 minutes) for larger videos
       };
 
       console.log('Creating story with API');
@@ -1416,7 +1567,91 @@ const services = {
         return Promise.reject(new Error('Authentication required'));
       }
 
-      // Try multiple endpoints with better error handling
+      // Add token to headers
+      config.headers['Authorization'] = `Bearer ${token}`;
+
+      // Log the FormData contents for debugging (without exposing the actual file data)
+      console.log('FormData contents:');
+      let hasMediaFile = false;
+      let mediaType = null;
+      let isVideoUpload = false;
+      let fileName = '';
+      let fileSize = 0;
+
+      for (const [key, value] of storyData.entries()) {
+        if (key === 'media') {
+          hasMediaFile = true;
+          fileName = value.name;
+          fileSize = value.size;
+          console.log('- media:', value.name, value.type, `${(value.size / (1024 * 1024)).toFixed(2)} MB`);
+          mediaType = value.type;
+          isVideoUpload = mediaType && mediaType.startsWith('video/');
+        } else if (key === 'type' && value === 'video') {
+          isVideoUpload = true;
+        } else {
+          console.log(`- ${key}:`, value);
+        }
+      }
+
+      // Add special handling for video uploads
+      if (hasMediaFile && isVideoUpload) {
+        console.log('Video upload detected, using enhanced upload handling');
+
+        // For videos, we'll use a more reliable direct fetch approach with progress monitoring
+        return new Promise((resolve, reject) => {
+          // Create a new XMLHttpRequest for better control
+          const xhr = new XMLHttpRequest();
+
+          // Set up the request
+          xhr.open('POST', `http://localhost:${backendPort}/api/stories`, true);
+
+          // Add headers
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+          // Add upload progress monitoring
+          xhr.upload.onprogress = function(event) {
+            if (event.lengthComputable) {
+              const percentComplete = (event.loaded / event.total) * 100;
+              console.log(`Upload progress: ${percentComplete.toFixed(2)}%`);
+            }
+          };
+
+          // Set up event handlers
+          xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const data = JSON.parse(xhr.responseText);
+                console.log('Video story created successfully:', data);
+                resolve({ data });
+              } catch (e) {
+                console.error('Invalid JSON response from server:', e);
+                console.log('Raw response:', xhr.responseText);
+                reject(new Error('Invalid JSON response from server'));
+              }
+            } else {
+              console.error(`Server returned error status: ${xhr.status}`);
+              console.log('Response text:', xhr.responseText);
+              reject(new Error(`Server returned ${xhr.status}: ${xhr.statusText}`));
+            }
+          };
+
+          xhr.onerror = function(e) {
+            console.error('Network error during video upload:', e);
+            reject(new Error('Network error occurred during upload'));
+          };
+
+          xhr.ontimeout = function() {
+            console.error('Video upload timed out');
+            reject(new Error('Upload timed out'));
+          };
+
+          // Send the FormData
+          xhr.send(storyData);
+          console.log('Video upload request sent');
+        });
+      }
+
+      // For non-video uploads, use the standard approach with fallbacks
       return api.post(fixPath('/api/stories'), storyData, config)
         .catch(error => {
           console.log('Primary story creation endpoint failed, trying alternative:', error.message);

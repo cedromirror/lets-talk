@@ -28,8 +28,7 @@ module.exports = function(app) {
       secure: false,
       pathRewrite: { '^/api': '/api' },
       headers: {
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*'
+        'Connection': 'keep-alive'
       },
       onProxyReq: (proxyReq, req, res) => {
         logProxyActivity('API', req, BACKEND_URL);
@@ -53,8 +52,7 @@ module.exports = function(app) {
       secure: false,
       ws: true,
       headers: {
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*'
+        'Connection': 'keep-alive'
       },
       onProxyReqWs: (proxyReq, req, socket, options, head) => {
         logProxyActivity('WebSocket', req, BACKEND_URL);
@@ -76,8 +74,7 @@ module.exports = function(app) {
       changeOrigin: true,
       secure: false,
       headers: {
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*'
+        'Connection': 'keep-alive'
       },
       onProxyReq: (proxyReq, req, res) => {
         logProxyActivity('Uploads', req, BACKEND_URL);
@@ -100,8 +97,7 @@ module.exports = function(app) {
       changeOrigin: true,
       secure: false,
       headers: {
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*'
+        'Connection': 'keep-alive'
       },
       onProxyReq: (proxyReq, req, res) => {
         logProxyActivity('Images', req, BACKEND_URL);

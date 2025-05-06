@@ -6,8 +6,11 @@ import { NotificationProvider } from './context/NotificationContext';
 import { CssBaseline, Box, CircularProgress } from '@mui/material';
 import { ThemeProvider } from './context/ThemeContext';
 import api from './services/api';
-// Removed mock data import
 import ErrorBoundary from './components/ErrorBoundary';
+
+// Import framer-motion for animations
+// import { AnimatePresence } from 'framer-motion';
+// Temporarily commented out until framer-motion is installed
 
 // Import preloaders to ensure Material-UI components are loaded early
 import IconPreloader from './components/IconPreloader';
@@ -19,6 +22,7 @@ import LoadingScreen from './components/LoadingScreen';
 import ExploreWrapper from './pages/ExploreWrapper';
 import SettingsContainer from './pages/SettingsContainer';
 import NotificationSettings from './pages/NotificationSettings';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy load pages for better performance
 const Login = lazy(() => import('./pages/Login'));
@@ -40,32 +44,21 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const Create = lazy(() => import('./pages/Create'));
 const Reels = lazy(() => import('./pages/Reels'));
 const Live = lazy(() => import('./pages/Live'));
-const Shop = lazy(() => import('./pages/Shop'));
+const Shop = lazy(() => import('./pages/ShopMUI'));
 // Settings is now imported directly via SettingsWrapper
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ImageOptimizationDemo = lazy(() => import('./pages/ImageOptimizationDemo'));
 const MediaTest = lazy(() => import('./pages/MediaTest'));
-const Home = lazy(() => import('./pages/Home'));
+const DebugTools = lazy(() => import('./pages/DebugTools'));
+const UIDemo = lazy(() => import('./pages/UIDemo'));
+// StoryDebug page removed to avoid conflicts
+const Home = lazy(() => import('./pages/NewHome'));
+const RemoveAccount = lazy(() => import('./pages/RemoveAccount'));
 
 // Components
 const Navbar = lazy(() => import('./components/Navbar'));
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const ConnectionStatus = lazy(() => import('./components/ConnectionStatus'));
-
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-
-  return <ErrorBoundary>{children}</ErrorBoundary>;
-};
 
 function App() {
   const [backendStatus, setBackendStatus] = useState('Checking...');
@@ -138,7 +131,7 @@ function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
-                  ml: { xs: 0, md: '240px' } // Match drawer width
+                  ml: { xs: 0, md: '280px' } // Match drawer width (280px)
                 }}>
                   <ErrorBoundary>
                     <Navbar />
@@ -147,10 +140,10 @@ function App() {
                     component="main"
                     sx={{
                       flexGrow: 1,
-                      p: { xs: 1, sm: 2, md: 3 },
                       overflow: 'auto'
                     }}
                   >
+                    {/* <AnimatePresence mode="wait"> */}
                   <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -250,8 +243,25 @@ function App() {
                 <Route path="/media-test" element={
                   <MediaTest />
                 } />
+                <Route path="/debug" element={
+                  <ProtectedRoute>
+                    <DebugTools />
+                  </ProtectedRoute>
+                } />
+                <Route path="/ui-demo" element={
+                  <ProtectedRoute>
+                    <UIDemo />
+                  </ProtectedRoute>
+                } />
+                <Route path="/remove-account" element={
+                  <ProtectedRoute>
+                    <RemoveAccount />
+                  </ProtectedRoute>
+                } />
+                {/* StoryDebug route removed to avoid conflicts */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+                    {/* </AnimatePresence> */}
                   </Box>
                 </Box>
               </Box>

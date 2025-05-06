@@ -18,6 +18,7 @@ import {
 } from '@mui/icons-material';
 import { handleApiError } from '../utils/errorUtils';
 import axios from 'axios';
+import BackendConnectionTest from '../components/BackendConnectionTest';
 
 const Login = () => {
   const theme = useTheme();
@@ -191,12 +192,23 @@ const Login = () => {
       setSuccessMessage('Login successful! Redirecting...');
       setShowSuccessSnackbar(true);
 
-      // Short delay for better UX
+      // Immediately set a flag in localStorage to indicate successful login
+      localStorage.setItem('loginSuccess', 'true');
+
+      // Set a session storage flag to indicate this is a fresh login
+      // This helps with showing the sidebar immediately
+      sessionStorage.setItem('freshLogin', 'true');
+
+      // Set a flag to ensure the sidebar stays visible
+      localStorage.setItem('sidebarVisible', 'true');
+
+      console.log('Login: Set flags for successful login and fresh login');
+
+      // Short delay for better UX and to ensure auth state is updated
       setTimeout(() => {
-        // Redirect to home page or the page user was trying to access
-        const { from } = location.state || { from: { pathname: '/' } };
-        console.log('Redirecting to:', from);
-        navigate(from);
+        // Always redirect to home page after login
+        console.log('Redirecting to home page after successful login');
+        navigate('/', { replace: true });
       }, 1000);
     } catch (err) {
       console.error('Login error details:', err);
@@ -574,6 +586,13 @@ const Login = () => {
             </Card>
           </Box>
         </Paper>
+
+        {/* Show backend connection test when server is offline */}
+        {serverStatus === 'offline' && (
+          <Box sx={{ mt: 4, width: '100%' }}>
+            <BackendConnectionTest />
+          </Box>
+        )}
       </Box>
     </Container>
   );
